@@ -2,18 +2,19 @@
 require 'SaveFunctions'
 
 -- TODO: Support Character.wz animations. Requires stitching body parts together for each frame, and different tree traversal logic (Character.wz has delay in walk\0 and PNGs in walk\0\body and walk\0\arm). See "Temp fix" below.
+-- TODO: Cleanup unused folders
 
 ------------------------------------------------------------
 -- Config
 
 outputDir = "D:\\wz"
-local rootWzName = "Effect" -- Use "Base" to dump all .wz files
+local rootWzName = "Base" -- Use "Base" to dump all .wz files
 
 -- Export options. Set to nil to avoid exporting.
 local imageOutputFileType = "png"       -- "png"/nil
-local animationOutputFileType = "gif" -- "apng"/"gif"/nil
-local audioOutputFileType = nil       -- "mp3"/"wav"/nil
-local dataOutputFileType = "xml"     -- "xml"/nil
+local animationOutputFileType = "apng" -- "apng"/"gif"/nil
+local audioOutputFileType = "mp3"       -- "mp3"/"wav"/nil
+local dataOutputFileType = "json"     -- "xml"/nil
 -- Fonts currently not supported
 
 -- Setting this to true will prioritize saving animations first, and only save static images if they are not part of an animation.

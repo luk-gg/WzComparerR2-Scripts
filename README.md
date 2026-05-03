@@ -1,7 +1,7 @@
 Lua scripts for [WzComparerR2](https://github.com/PirateIzzy/WzComparerR2) to batch dump data and assets from .wz files. They have been specifically tested with MapleStory Classic World's Closed Online Test client, but may work with other clients as well.
 
 ## Usage
-Download the latest [WzComparerR2](https://github.com/PirateIzzy/WzComparerR2/releases) and [all scripts in this repo](https://github.com/PirateIzzy/WzComparerR2/archive/refs/heads/master.zip).
+Download the latest [WzComparerR2](https://github.com/PirateIzzy/WzComparerR2/releases) and [all scripts in this repo](https://github.com/luk-gg/WzComparerR2-Scripts/archive/refs/heads/main.zip).
 
 In WzComparerR2, open your `Base.wz`, then click `Tools > Lua Console` and open `DumpEverything.lua`. Change the config variables at the top to your liking, then click `Debug > Run`.
 

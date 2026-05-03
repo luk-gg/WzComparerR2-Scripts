@@ -37,8 +37,7 @@ t_IGifFrame.Draw = luanet.get_method_bysig(t_IGifFrame.typeRef, 'Draw', "System.
 
 -- WzComparerR2.Common/Encoders provides BuildInApngEncoder and BuildInGifEncoder; the rest of the logic is nearly identical.
 function saveAnimation(node, saveFolder, ext, createEncoder)
-    local delayNode = node -- Etc\RuneStone.img\runeStone\0\0\stay\0\delay
-    local pngNode = delayNode.ParentNode
+    local pngNode = node
     local folderNode = pngNode.ParentNode
 
     local fileName = fullPathToFileName(folderNode.FullPath)
@@ -159,6 +158,9 @@ function saveXml(node, saveFolder, wzImg)
 
     writer:Flush()
     file:Close()
+
+    local content = File.ReadAllText(filePath)
+    File.WriteAllText(filePath, normalizeOutlinkPaths(content))
 end
 
 -- Vibecoded JSON saving
@@ -217,6 +219,9 @@ local function wzNodeToTable(node)
             return node.Value.Uol
         end
 
+        if type(node.Value) == "string" then
+            return normalizeOutlinkPaths(node.Value)
+        end
         return node.Value
     end
 

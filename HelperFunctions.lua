@@ -58,8 +58,8 @@ function fullPathToFileName(fullPath)
 end
 
 -- Deletes the "_Canvas" section of a file path
-function removeCanvasFromPath(path)
-    return path:gsub("\\_Canvas", "")
+function removeCanvasFromString(path)
+    return path:gsub("\\_Canvas", ""):gsub("/_Canvas", "")
     -- return path:gsub("\\[_][^\\]*", "") -- Remove anything prefixed with _
 end
 
@@ -72,6 +72,18 @@ function findWz(path)
     return PluginManager.FindWz(path)
 end
 
+-- Vibecoded
+-- Remove "_Canvas" if requested, and use period separators beyond .img/
+function normalizeOutlinkPaths(str)
+    if flattenCanvasFolder then
+        str = removeCanvasFromString(str)
+    end
+    str = str:gsub("([^/\"]+%.img)/([^\"]*)", function(imgSegment, rest)
+        return imgSegment .. "/" .. rest:gsub("/", ".")
+    end)
+    return str
+end
+
 ------------------------------------------------------------
 -- Type checks
 
@@ -80,9 +92,7 @@ function isPngNode(node)
 end
 
 function isDelayNode(node)
-    -- Temp fix: ignore delay nodes if their parent isn't a Wz_Png (like in Effect.wz) or named a number.
-    -- Need to refactor for Character.wz which sometimes houses delay as a sibling node to the Wz_Png frames, or has non-number frame names.
-    return node.Text == "delay" and node:GetType().Name == 'Wz_Node' and isPngNode(node.ParentNode) and tonumber(node.ParentNode.Text)
+    return node.Text == "delay" and node:GetType().Name == 'Wz_Node'
 end
 
 function isSoundNode(node)
@@ -101,4 +111,15 @@ end
 
 function isUolNode(node)
     return node.Value and type(node.Value) == "userdata" and node.Value:GetType().Name == "Wz_Uol"
+end
+
+function isAnimationFolder(folderNode)
+    local count = 0
+    for _, child in each(folderNode.Nodes) do
+        if (isPngNode(child) or isUolNode(child)) and tonumber(child.Text) then
+            count = count + 1
+            if count > 1 then return true end
+        end
+    end
+    return false
 end

@@ -1,30 +1,27 @@
 ﻿require 'HelperFunctions'
 require 'SaveFunctions'
 
--- This script automates extracting data, images, animations, and audio files from .wz files.
--- It has been specifically tested with MapleStory Classic World's Closed Online Test client, but may work with other clients as well.
-
--- Note on exporting animation frames: the game uses "Wz_Uol" to reuse existing frames, so while only 3 images might export for animation "walk", the  animation might also reuse 2 frames from the "stand" animation. Check Npc\0000406.img\smile in WzComparer for an example.
-
--- TODO: Support Character.wz animations. Requires stitching body parts together for each frame, and different tree traversal logic (frame indices are directories instead of PNGs. Inside the directory there are PNGs for body and arm and a node for frame delay). See isDelayNode in HelperFunctions.
--- TODO: Handle animations with no delay (Effect\BasicEff.img\LevelUp)
+-- TODO: Support Character.wz animations. Requires stitching body parts together for each frame, and different tree traversal logic (Character.wz has delay in walk\0 and PNGs in walk\0\body and walk\0\arm). See "Temp fix" below.
 
 ------------------------------------------------------------
 -- Config
 
 outputDir = "D:\\wz"
-local rootWzName = "Npc\\0000406.img" -- Use "Base" to dump all .wz files
+local rootWzName = "Effect" -- Use "Base" to dump all .wz files
 
 -- Export options. Set to nil to avoid exporting.
-local imageOutputFileType = "png"     -- "png"/nil
+local imageOutputFileType = "png"       -- "png"/nil
 local animationOutputFileType = "gif" -- "apng"/"gif"/nil
-local audioOutputFileType = nil     -- "mp3"/"wav"/nil
-local dataOutputFileType = "json"      -- "xml"/nil
+local audioOutputFileType = nil       -- "mp3"/"wav"/nil
+local dataOutputFileType = "xml"     -- "xml"/nil
 -- Fonts currently not supported
 
 -- Setting this to true will prioritize saving animations first, and only save static images if they are not part of an animation.
 -- Requires a valid imageOutputFileType and animationOutputFileType.
 local preferAnimations = false
+
+-- Setting this to true will put all images and animations in the same folder, removing the _Canvas folder which only stores images. Data files with fields containing "_Canvas" will also be adjusted. If set to false, PNGs will be in _Canvas\.img while animations will be in .img folders.
+flattenCanvasFolder = true
 
 ------------------------------------------------------------
 -- Main
@@ -77,7 +74,10 @@ for wzNode in enumAllWzNodes(rootWz) do
     if wzImg then
         env:WriteLine('(extract) ' .. wzNode.FullPathToFile)
 
-        local saveFolder = Path.Combine(outputDir, toValidPath(removeCanvasFromPath(wzNode.FullPathToFile)))
+        local saveFolder = Path.Combine(outputDir, toValidPath(wzNode.FullPathToFile))
+        if flattenCanvasFolder then
+            saveFolder = Path.Combine(outputDir, toValidPath(removeCanvasFromString(wzNode.FullPathToFile)))
+        end
 
         if not Directory.Exists(saveFolder) then
             Directory.CreateDirectory(saveFolder)
@@ -95,17 +95,24 @@ for wzNode in enumAllWzNodes(rootWz) do
                 --     node = node.Value:HandleUol(node)
                 -- end
 
-                if animationSaveFunc and isDelayNode(node) then
-                    local folderPath = node.ParentNode.ParentNode.FullPathToFile
+                -- Temp fix: use tonumber() to ignore PNGs that aren't numbers (Character.wz)
+                if animationSaveFunc and isPngNode(node) and tonumber(node.Text) and not isCanvasDir(wzNode.FullPathToFile) then
+                    local folderNode = node.ParentNode
 
-                    -- Since all frames use the same parent folder, only try saving animation on the first frame and skip subsequent frames
-                    if not savedAnimations[folderPath] and not failedAnimations[folderPath] then
-                        local saveOk, saveErr = pcall(animationSaveFunc, node, saveFolder, animationOutputFileType)
-                        if saveOk then
-                            savedAnimations[folderPath] = true
-                        else
-                            failedAnimations[folderPath] = true
-                            logError(string.format("Error saving [%s]: %s", node.FullPathToFile, saveErr))
+                    -- Check if its a single frame or has multiple frames
+                    if isAnimationFolder(folderNode) then
+                        local folderPath = folderNode.FullPathToFile
+
+                        -- Since all frames use the same parent folder, only try saving animation on the first frame and skip subsequent frames
+                        if not savedAnimations[folderPath] and not failedAnimations[folderPath] then
+                            local saveOk, saveErr = pcall(animationSaveFunc, node, saveFolder,
+                                animationOutputFileType)
+                            if saveOk then
+                                savedAnimations[folderPath] = true
+                            else
+                                failedAnimations[folderPath] = true
+                                logError(string.format("Error saving [%s]: %s", node.FullPathToFile, saveErr))
+                            end
                         end
                     end
                 end
@@ -125,8 +132,8 @@ for wzNode in enumAllWzNodes(rootWz) do
             -- Skip checking _Canvas directories for data
             if dataSaveFunc and not isCanvasDir(wzNode.FullPathToFile) then
                 -- Go up 1 directory to put data alongside .img folder
-                saveFolder = Path.GetDirectoryName(saveFolder)
-                trySave(dataSaveFunc, wzNode, saveFolder, wzImg)
+                local dataSaveFolder = Path.GetDirectoryName(saveFolder)
+                trySave(dataSaveFunc, wzNode, dataSaveFolder, wzImg)
             end
 
             wzImg:Unextract()
